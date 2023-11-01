@@ -1,14 +1,21 @@
-CREATE DATABASE TrainData1;
+CREATE DATABASE TrainData;
 Go
 
 DROP TABLE Tickets;
-DROP TABLE Customers;
-DROP TABLE Gender;
-DROP TABLE States;
 DROP TABLE Trips;
-DROP TABLE Stations;
-DROP TABLE Trains;
 DROP TABLE Classes;
+DROP TABLE Trains;
+DROP TABLE Stations;
+
+DROP TABLE Customers;
+DROP TABLE cities;
+DROP TABLE States;
+DROP TABLE Gender;
+
+
+
+
+
 Go
 
 CREATE TABLE Genders (
