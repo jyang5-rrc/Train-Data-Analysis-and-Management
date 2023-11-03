@@ -35,77 +35,100 @@ cursor = conn.cursor()
 def create_tables():
     # Drop tables if they exist to avoid errors on re-creation
     tables = {
-                "Gender": """
-                            CREATE TABLE Gender (
-                                gender_id INT PRIMARY KEY IDENTITY(1,1),
-                                gender NVARCHAR(10) NOT NULL
+                "Genders": """
+                            CREATE TABLE Genders (
+                                gender_id INT IDENTITY(1,1),
+                                gender NVARCHAR(5) NOT NULL,
+                                CONSTRAINT PK_Genders_GendersID PRIMARY KEY (gender_id),
+                                CONSTRAINT Gender_UK_Genders UNIQUE (gender)
                             );
                             """,
                 "States": """
                             CREATE TABLE States (
-                                state_id INT PRIMARY KEY IDENTITY(1,1),
-                                state_name NVARCHAR(100) NOT NULL
+                                state_id INT IDENTITY(1,1),
+                                state_name NVARCHAR(35) NOT NULL
+                                CONSTRAINT PK_States_StateID PRIMARY KEY (state_id),
+                                CONSTRAINT States_UK_StateName UNIQUE (state_name)
+                            );
+                            """,
+                "Cities": """
+                            CREATE TABLE Cities (
+                                city_id INT IDENTITY(1,1),
+                                city_name NVARCHAR(35) NOT NULL,
+                                state_id INT,
+                                CONSTRAINT PK_Cities_CityID PRIMARY KEY (city_id),
+                                CONSTRAINT Fk_Cities_States FOREIGN KEY (state_id) REFERENCES States(state_id)
                             );
                             """,
                 "Customers": """
                             CREATE TABLE Customers (
-                                cust_id INT PRIMARY KEY,
-                                first_name NVARCHAR(100) NOT NULL,
-                                last_name NVARCHAR(100) NOT NULL,
+                                cust_id INT,
+                                first_name NVARCHAR(35) NOT NULL,
+                                last_name NVARCHAR(35) NOT NULL,
                                 gender_id INT,
                                 phone NVARCHAR(20),
-                                address NVARCHAR(255),
-                                city NVARCHAR(100),
-                                state_id INT,
-                                date_created DATETIME,
-                                customerAge INT,
-                                CONSTRAINT fk_Customers_Gender FOREIGN KEY (gender_id) REFERENCES Gender(gender_id),
-                                CONSTRAINT fk_Customers_States FOREIGN KEY (state_id) REFERENCES States(state_id)
+                                address NVARCHAR(50),
+                                city_id INT,
+                                CONSTRAINT PK_Customers_CustID PRIMARY KEY (cust_id),
+                                CONSTRAINT FK_Customers_Genders FOREIGN KEY (gender_id) REFERENCES Genders(gender_id),
+                                CONSTRAINT FK_Customers_Cities FOREIGN KEY (city_id) REFERENCES Cities(city_id)
                             );
                             """,
                 "Classes": """
                             CREATE TABLE Classes (
-                                class_id INT PRIMARY KEY,
-                                class_name NVARCHAR(50) NOT NULL
+                                class_id INT,
+                                class_name NVARCHAR(10) NOT NULL,
+                                CONSTRAINT PK_Classes_ClassID PRIMARY KEY (class_id),
+                                CONSTRAINT Classes_UK_ClassName UNIQUE (class_name)
                             );
                             """,
                 "Trains": """
                             CREATE TABLE Trains (
-                                train_id INT PRIMARY KEY,
-                                train_name NVARCHAR(100) NOT NULL,
+                                train_id INT,
+                                train_name NVARCHAR(20) NOT NULL,
+                                CONSTRAINT PK_Trains_TrainID PRIMARY KEY (train_id),
+                                CONSTRAINT Trains_UK_TrainName UNIQUE (train_name)
                             );
                           """,
                 "Stations": """
                             CREATE TABLE Stations (
-                                station_id INT PRIMARY KEY IDENTITY(1,1),
-                                station_name NVARCHAR(255) NOT NULL,
+                                station_id INT IDENTITY(1,1),
+                                station_name NVARCHAR(35) NOT NULL,
+                                CONSTRAINT PK_Stations_StationID PRIMARY KEY (station_id),
+                                CONSTRAINT Stations_UK_StationName UNIQUE (station_name)
                             );
                             """,
                 "Trips": """ 
                             CREATE TABLE Trips (
-                                trip_id INT PRIMARY KEY,
-                                trip_no NVARCHAR(50) NOT NULL,
-                                depart_datetime DATETIME,
+                                trip_id INT,
+                                trip_no NVARCHAR(10) NOT NULL,
                                 station_id_depart INT,
-                                arrive_datetime DATETIME,
                                 station_id_arrive INT,
-                                CONSTRAINT fk_Trips_Station_Depart FOREIGN KEY (station_id_depart) REFERENCES Stations(station_id),
-                                CONSTRAINT fk_Trips_Station_Arrive FOREIGN KEY (station_id_arrive) REFERENCES Stations(station_id)
+                                depart_datetime DATETIME,
+                                arrive_datetime DATETIME,
+                                cost DECIMAL(5, 2) NOT NULL,
+                                train_id INT,
+                                CONSTRAINT PK_Trips_TripID PRIMARY KEY (trip_id),
+                                CONSTRAINT Trips_UK_TripNo UNIQUE (trip_no),
+                                CONSTRAINT FK_Trips_Station_Depart FOREIGN KEY (station_id_depart) REFERENCES Stations(station_id),
+                                CONSTRAINT FK_Trips_Station_Arrive FOREIGN KEY (station_id_arrive) REFERENCES Stations(station_id),
+                                CONSTRAINT FK_Trips_Trains FOREIGN KEY (train_id) REFERENCES Trains(train_id),
                             );
                             """,
                 "Tickets": """
                             CREATE TABLE Tickets (
-                                ticket_id INT PRIMARY KEY,
-                                ticket_no NVARCHAR(50) NOT NULL,
-                                cost DECIMAL(10, 2) NOT NULL,
-                                trip_id INT,
+                                ticket_id INT,
+                                ticket_no NVARCHAR(10) NOT NULL,
                                 cust_id INT,
-                                train_id INT,
+                                trip_id INT,
                                 class_id INT,
-                                CONSTRAINT fk_Tickets_Trip FOREIGN KEY (trip_id) REFERENCES Trips(trip_id),
-                                CONSTRAINT fk_Tickets_Customer FOREIGN KEY (cust_id) REFERENCES Customers(cust_id),
-                                CONSTRAINT fk_Tickets_Trains FOREIGN KEY (train_id) REFERENCES Trains(train_id),
-                                CONSTRAINT fk_Tickets_Classes FOREIGN KEY (class_id) REFERENCES Classes(class_id)
+                                cost DECIMAL(5, 2) NOT NULL,
+                                comfirm_ticket CHAR(1),
+                                CONSTRAINT PK_Tickets_TicketID PRIMARY KEY (ticket_id),
+                                CONSTRAINT Tickets_UK_TicketNo UNIQUE (ticket_no),
+                                CONSTRAINT FK_Tickets_Customers FOREIGN KEY (cust_id) REFERENCES Customers(cust_id),
+                                CONSTRAINT FK_Tickets_Trips FOREIGN KEY (trip_id) REFERENCES Trips(trip_id),
+                                CONSTRAINT FK_Tickets_Classes FOREIGN KEY (class_id) REFERENCES Classes(class_id)
                             );
                             """
             }
@@ -124,17 +147,18 @@ def insert_data_from_csv(file_path):
     # Insert into Gender table, avoiding duplicates
     for gender in data['gender'].drop_duplicates():
         cursor.execute("""
-        IF NOT EXISTS (SELECT * FROM Gender WHERE gender = ?)
-            INSERT INTO Gender (gender) VALUES (?)
+        IF NOT EXISTS (SELECT * FROM Genders WHERE gender = ?)
+            INSERT INTO Genders (gender) VALUES (?)
         """, (gender, gender))
-    
-    # Insert into States table, avoiding duplicates
+
+        
+     # Insert into Cities table, avoiding duplicates
     for state in data['state'].drop_duplicates():
         cursor.execute("""
         IF NOT EXISTS (SELECT * FROM States WHERE state_name = ?)
             INSERT INTO States (state_name) VALUES (?)
         """, (state, state))
-
+        
     # Insert into Stations, Trains, and Classes tables
     for station_name in data['station_id_depart'].drop_duplicates():
         cursor.execute("""
@@ -164,19 +188,30 @@ def insert_data_from_csv(file_path):
     # Assuming cust_id, trip_id, and ticket_id are unique in the dataset
     for row in data.itertuples():
         # Fetch gender_id for the customer
-        cursor.execute("SELECT gender_id FROM Gender WHERE gender = ?", row.gender)
+        cursor.execute("SELECT gender_id FROM Genders WHERE gender = ?", row.gender)
         gender_id = cursor.fetchone()[0]
         
         # Fetch state_id for the customer
         cursor.execute("SELECT state_id FROM States WHERE state_name = ?", row.state)
         state_id = cursor.fetchone()[0]
         
+        # Insert cities data
+        cursor.execute("""
+        IF NOT EXISTS (SELECT * FROM Cities WHERE city_name = ? AND state_id = ?)
+            INSERT INTO Cities (city_name, state_id)
+            VALUES (?, ?)
+        """, (row.city, state_id, row.city, state_id))
+        
+        # Fetch city_id for the customer
+        cursor.execute("SELECT city_id FROM Cities WHERE city_name = ?", row.city)
+        city_id = cursor.fetchone()[0]
+        
         # Insert customer data
         cursor.execute("""
         IF NOT EXISTS (SELECT * FROM Customers WHERE cust_id = ?)
-            INSERT INTO Customers (cust_id, first_name, last_name, gender_id, phone, address, city, state_id, date_created, customerAge)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (row.cust_id, row.cust_id, row.first_name, row.last_name, gender_id, row.phone, row.address, row.city, state_id, row.date_created, row.CustomerAge))
+            INSERT INTO Customers (cust_id, first_name, last_name, gender_id, phone, address, city_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (row.cust_id, row.cust_id, row.first_name, row.last_name, gender_id, row.phone, row.address, city_id))
 
 
         # Fetch station_id for the Trips table
@@ -190,23 +225,24 @@ def insert_data_from_csv(file_path):
         # Insert trips data
         cursor.execute("""
         IF NOT EXISTS (SELECT * FROM Trips WHERE trip_id = ?)
-            INSERT INTO Trips (trip_id, trip_no, depart_datetime, station_id_depart, arrive_datetime, station_id_arrive)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (row.trip_id, row.trip_id, row.trip_no, row.depart_datetime, station_id_depart, row.arrive_datetime, station_id_arrive))
+            INSERT INTO Trips (trip_id, trip_no, station_id_depart, station_id_arrive, depart_datetime, arrive_datetime,cost, train_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (row.trip_id, row.trip_id, row.trip_no, station_id_depart, station_id_arrive, row.depart_datetime, row.arrive_datetime, row.cost, row.train_id))
 
         # Insert tickets data
         cursor.execute("""
         IF NOT EXISTS (SELECT * FROM Tickets WHERE ticket_id = ?)
-            INSERT INTO Tickets (ticket_id, ticket_no, cost, trip_id, cust_id, train_id, class_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (row.ticket_id, row.ticket_id, row.ticket_no, row.cost, row.trip_id, row.cust_id, row.train_id, row.class_id))
+            INSERT INTO Tickets (ticket_id, ticket_no, cust_id, trip_id, class_id, cost)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (row.ticket_id, row.ticket_id, row.ticket_no, row.cust_id, row.trip_id, row.class_id, row.cost))
 
     conn.commit()
+    print("Data inserted successfully!")
 
     
 
 # Create tables and insert data
-create_tables()
+create_tables() 
 csv_file_path = 'TrainData.csv'
 insert_data_from_csv(csv_file_path)
 
