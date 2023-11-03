@@ -91,14 +91,13 @@ CREATE TABLE Trips (
     station_id_arrive INT,
     depart_datetime DATETIME,
     arrive_datetime DATETIME,
+    cost DECIMAL(5, 2) NOT NULL,
     train_id INT,
-    class_id INT,
     CONSTRAINT PK_Trips_TripID PRIMARY KEY (trip_id),
     CONSTRAINT Trips_UK_TripNo UNIQUE (trip_no),
     CONSTRAINT FK_Trips_Station_Depart FOREIGN KEY (station_id_depart) REFERENCES Stations(station_id),
     CONSTRAINT FK_Trips_Station_Arrive FOREIGN KEY (station_id_arrive) REFERENCES Stations(station_id),
     CONSTRAINT FK_Trips_Trains FOREIGN KEY (train_id) REFERENCES Trains(train_id),
-    CONSTRAINT FK_Trips_Classes FOREIGN KEY (class_id) REFERENCES Classes(class_id)
 );
 Go
 
@@ -108,11 +107,17 @@ CREATE TABLE Tickets (
     ticket_no NVARCHAR(10) NOT NULL,
     cust_id INT,
     trip_id INT,
+    class_id INT,
     cost DECIMAL(5, 2) NOT NULL,
+    comfirm_ticket CHAR(1),
     CONSTRAINT PK_Tickets_TicketID PRIMARY KEY (ticket_id),
     CONSTRAINT Tickets_UK_TicketNo UNIQUE (ticket_no),
     CONSTRAINT FK_Tickets_Customers FOREIGN KEY (cust_id) REFERENCES Customers(cust_id),
-    CONSTRAINT FK_Tickets_Trips FOREIGN KEY (trip_id) REFERENCES Trips(trip_id)
+    CONSTRAINT FK_Tickets_Trips FOREIGN KEY (trip_id) REFERENCES Trips(trip_id),
+    CONSTRAINT FK_Tickets_Classes FOREIGN KEY (class_id) REFERENCES Classes(class_id)
 );
 Go
 
+-- Add column into table tickets.(lost before)
+ALTER TABLE tickets
+ADD comfirm_ticket CHAR(1) NOT NULL;
